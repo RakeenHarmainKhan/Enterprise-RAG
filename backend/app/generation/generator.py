@@ -10,7 +10,7 @@ from app.core.exceptions import GenerationError
 from app.core.llm import LLMProvider
 from app.generation.citations import CitationExtractor
 from app.generation.context_builder import ContextBuilder
-from app.retrieval.engine import RetrievedChunk, RetrievalEngine
+from app.retrieval.engine import RetrievalEngine, RetrievedChunk
 
 
 class GenerationEngine:

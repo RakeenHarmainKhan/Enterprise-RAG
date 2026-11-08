@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+
 from app.api.routes.admin import admin_clear_cache
 from app.api.routes.documents import delete_document, upload_document
 from app.cache.semantic_cache import SemanticCache

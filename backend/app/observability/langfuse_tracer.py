@@ -79,7 +79,7 @@ def trace_span(name: str | None = None) -> Callable[[Callable[P, R]], Callable[P
             trace_obj = None
             try:
                 trace_obj = client.trace(name=span_name)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 trace_obj = None
             try:
                 return await fn(*args, **kwargs)  # type: ignore[misc]

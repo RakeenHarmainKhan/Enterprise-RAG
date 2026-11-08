@@ -3,10 +3,11 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from app.api.routes.health import router
-from app.core.config import CacheConfig, YamlAppConfig
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+
+from app.api.routes.health import router
+from app.core.config import CacheConfig, YamlAppConfig
 
 
 @pytest.mark.asyncio

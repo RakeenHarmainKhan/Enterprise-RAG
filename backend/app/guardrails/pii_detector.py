@@ -12,12 +12,12 @@ from app.guardrails.models import GuardrailResult
 class PIIDetectorGuardrail:
     name = "pii_detector"
 
-    _patterns: list[tuple[str, re.Pattern[str]]] = [
+    _patterns: tuple[tuple[str, re.Pattern[str]], ...] = (
         ("email", re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")),
         ("phone", re.compile(r"\b\+?\d[\d\s().-]{8,}\b")),
         ("ssn", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
         ("credit_card", re.compile(r"\b(?:\d[ -]*?){13,16}\b")),
-    ]
+    )
 
     async def run(self, text: str, context: dict[str, Any] | None, **params: Any) -> GuardrailResult:
         action = str(params.get("_action", params.get("action", "redact")))

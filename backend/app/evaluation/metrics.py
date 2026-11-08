@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.core.config import EvaluationConfig, YamlAppConfig
@@ -63,7 +63,7 @@ class EvaluationEngine:
         contexts: list[str],
     ) -> dict[str, Any]:
         metrics = list(self._cfg.metrics)
-        row: dict[str, Any] = {"id": str(uuid.uuid4()), "ts": datetime.now(timezone.utc).isoformat()}
+        row: dict[str, Any] = {"id": str(uuid.uuid4()), "ts": datetime.now(UTC).isoformat()}
         try:
             if "faithfulness" in metrics:
                 row["faithfulness"] = await self.faithfulness(answer, contexts)

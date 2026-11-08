@@ -9,9 +9,11 @@ from typing import Any
 from fastapi import APIRouter, Request
 
 from app.api.dependencies import SemanticCacheDep, YamlConfigDep
+from app.core.logging import get_logger
 from app.ingestion.pipeline import IngestionPipeline
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+log = get_logger(__name__)
 
 
 @router.get("/stats")
@@ -22,8 +24,8 @@ async def admin_stats(request: Request, cache: SemanticCacheDep) -> dict[str, An
     try:
         r = state.opensearch.count(index=index)
         doc_count = int(r.get("count", 0))
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001
+        log.warning("opensearch_count_failed", error=str(e))
     registry = await state.documents.list_docs()
     return {
         "opensearch_index": index,

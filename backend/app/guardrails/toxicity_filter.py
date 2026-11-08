@@ -12,9 +12,7 @@ class ToxicityFilterGuardrail:
     name = "toxicity_filter"
 
     _lexicon = frozenset(
-        """
-        hate kill stupid idiot loser slur abuse violent threat harass
-        """.split()
+        ["hate", "kill", "stupid", "idiot", "loser", "slur", "abuse", "violent", "threat", "harass"]
     )
 
     def _score(self, text: str) -> float:

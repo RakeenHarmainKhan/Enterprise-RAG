@@ -71,9 +71,9 @@ This repository does **not** ship a dedicated cost dashboard. Practical approach
 
 **`EventBus`** (`observability/event_bus.py`) is a minimal pub/sub. **`query.py`** publishes:
 
-- **`{"type": "query_start", "query": "<first 200 chars>"}`**
-- **`{"type": "query_cache_hit"}`** on semantic cache hit
-- **`{"type": "query_done", "stream": true|false}`**
+- **`{"type": "query_start"}`** without question text
+- **`{"type": "query_cache_hit", "duration_ms": ...}`** on semantic cache hit
+- **`{"type": "query_done", "stream": true|false, "sources": ..., "warnings": ..., "duration_ms": ...}`**
 
 Subscribe in custom code by holding a reference to **`app.state.app_state.event_bus`** and registering async listeners (extend **`EventBus`** if you need multi-consumer patterns).
 
