@@ -1,0 +1,52 @@
+"""Assemble retrieved chunks into a prompt context with a token budget."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from app.retrieval.engine import RetrievedChunk
+
+
+class ContextBuilder:
+    """Rough token estimate (~4 chars/token) to stay within ``max_tokens``."""
+
+    def __init__(self, max_tokens: int = 8000, chars_per_token: float = 4.0) -> None:
+        self.max_tokens = max_tokens
+        self.chars_per_token = chars_per_token
+
+    def _estimate_tokens(self, text: str) -> int:
+        return max(1, int(len(text) / self.chars_per_token))
+
+    def build(
+        self,
+        query: str,
+        chunks: list[RetrievedChunk],
+        *,
+        header: str | None = None,
+    ) -> tuple[str, list[dict[str, Any]]]:
+        budget = self.max_tokens - self._estimate_tokens(query) - 200
+        parts: list[str] = []
+        sources: list[dict[str, Any]] = []
+        used = 0
+        hdr = header or "Use the following excerpts. Cite sources as [n] matching the excerpt number."
+        used += self._estimate_tokens(hdr)
+        parts.append(hdr)
+
+        for i, ch in enumerate(chunks, start=1):
+            block = f"[{i}] (doc={ch.document_id}, chunk={ch.chunk_id})\n{ch.text}\n"
+            t = self._estimate_tokens(block)
+            if used + t > budget:
+                break
+            parts.append(block)
+            sources.append(
+                {
+                    "index": i,
+                    "chunk_id": ch.chunk_id,
+                    "document_id": ch.document_id,
+                    "preview": ch.text[:280],
+                    "score": ch.score,
+                }
+            )
+            used += t
+
+        return "\n".join(parts), sources

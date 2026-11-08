@@ -1,0 +1,255 @@
+import { Dialog, Transition } from "@headlessui/react";
+import {
+  ArrowPathIcon,
+  Bars3Icon,
+  BeakerIcon,
+  ChartBarIcon,
+  ChatBubbleLeftRightIcon,
+  Cog6ToothIcon,
+  DocumentTextIcon,
+  FolderIcon,
+  ShieldCheckIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+import { Fragment, useEffect, useState } from "react";
+
+import { AnalyticsDashboard } from "./components/AnalyticsDashboard";
+import { ChatInterface } from "./components/ChatInterface";
+import { DocumentManager } from "./components/DocumentManager";
+import { EvaluationPanel } from "./components/EvaluationPanel";
+import { GuardrailsConfig } from "./components/GuardrailsConfig";
+import { adminReindex, createCollection, listCollections, listDocuments } from "./services/api";
+import { useStore, type UiTab } from "./store";
+
+const nav: { id: UiTab; label: string; icon: typeof ChatBubbleLeftRightIcon }[] = [
+  { id: "chat", label: "Chat", icon: ChatBubbleLeftRightIcon },
+  { id: "documents", label: "Documents", icon: DocumentTextIcon },
+  { id: "collections", label: "Collections", icon: FolderIcon },
+  { id: "analytics", label: "Analytics", icon: ChartBarIcon },
+  { id: "evaluation", label: "Evaluation", icon: BeakerIcon },
+  { id: "settings", label: "Settings", icon: Cog6ToothIcon },
+];
+
+function CollectionsPanel() {
+  const collections = useStore((s) => s.collections);
+  const setCollections = useStore((s) => s.setCollections);
+  const [name, setName] = useState("");
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        setCollections(await listCollections());
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [setCollections]);
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h2 className="text-sm font-semibold text-slate-800">Collections</h2>
+      <div className="mt-3 flex gap-2">
+        <input
+          className="flex-1 rounded-lg border border-slate-200 px-2 py-1 text-sm"
+          placeholder="New collection name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <button
+          type="button"
+          className="rounded-lg bg-accent px-3 py-1 text-sm font-semibold text-white"
+          onClick={async () => {
+            if (!name.trim()) return;
+            await createCollection(name.trim());
+            setName("");
+            setCollections(await listCollections());
+          }}
+        >
+          Create
+        </button>
+      </div>
+      <ul className="mt-4 divide-y divide-slate-100 text-sm">
+        {collections.map((c) => (
+          <li key={c.id} className="py-2">
+            <div className="font-medium text-slate-800">{c.name}</div>
+            <div className="text-xs text-slate-500">{c.description}</div>
+            <div className="font-mono text-[10px] text-slate-400">{c.id}</div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default function App() {
+  const tab = useStore((s) => s.tab);
+  const setTab = useStore((s) => s.setTab);
+  const sidebarCollapsed = useStore((s) => s.sidebarCollapsed);
+  const toggleSidebar = useStore((s) => s.toggleSidebar);
+  const setDocuments = useStore((s) => s.setDocuments);
+  const setCollections = useStore((s) => s.setCollections);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        setDocuments(await listDocuments());
+      } catch {
+        /* ignore */
+      }
+      try {
+        setCollections(await listCollections());
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [setDocuments, setCollections]);
+
+  return (
+    <div className="flex min-h-screen bg-slate-50">
+      <aside
+        className={`hidden border-r border-slate-200 bg-ink-950 text-slate-100 md:flex md:flex-col ${
+          sidebarCollapsed ? "w-20" : "w-64"
+        } transition-all`}
+      >
+        <div className="flex items-center gap-2 px-4 py-4 text-lg font-bold">
+          <ShieldCheckIcon className="h-7 w-7 text-accent" />
+          {!sidebarCollapsed && <span>Enterprise RAG</span>}
+        </div>
+        <nav className="flex-1 space-y-1 px-2">
+          {nav.map((item) => {
+            const Icon = item.icon;
+            const active = tab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setTab(item.id)}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                  active ? "bg-white/10 text-white" : "text-slate-300 hover:bg-white/5"
+                }`}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                {!sidebarCollapsed && item.label}
+              </button>
+            );
+          })}
+        </nav>
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="m-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-300 hover:bg-white/5"
+        >
+          {sidebarCollapsed ? "Expand" : "Collapse"}
+        </button>
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+          <span className="font-semibold text-slate-900">Enterprise RAG</span>
+          <MobileNav tab={tab} setTab={setTab} />
+        </header>
+        <main className="mx-auto w-full max-w-6xl flex-1 space-y-4 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">
+                {nav.find((n) => n.id === tab)?.label ?? "App"}
+              </h1>
+              <p className="text-sm text-slate-500">Hybrid retrieval, guardrails, observability-ready API.</p>
+            </div>
+            {tab === "documents" && (
+              <button
+                type="button"
+                onClick={() => void adminReindex()}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1 text-sm hover:bg-slate-50"
+              >
+                <ArrowPathIcon className="h-4 w-4" />
+                Reindex (admin)
+              </button>
+            )}
+          </div>
+          {tab === "chat" && <ChatInterface />}
+          {tab === "documents" && <DocumentManager />}
+          {tab === "collections" && <CollectionsPanel />}
+          {tab === "analytics" && <AnalyticsDashboard />}
+          {tab === "evaluation" && <EvaluationPanel />}
+          {tab === "settings" && (
+            <div className="space-y-4">
+              <GuardrailsConfig />
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function MobileNav({ tab, setTab }: { tab: UiTab; setTab: (t: UiTab) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className="rounded-lg border border-slate-200 p-2"
+        onClick={() => setOpen(true)}
+      >
+        <Bars3Icon className="h-5 w-5" />
+      </button>
+      <Transition show={open} as={Fragment}>
+        <Dialog className="relative z-50 md:hidden" onClose={setOpen}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-200"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-150"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/40" />
+          </Transition.Child>
+          <div className="fixed inset-0 flex justify-end">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-200"
+              enterFrom="translate-x-full"
+              enterTo="translate-x-0"
+              leave="ease-in duration-150"
+              leaveFrom="translate-x-0"
+              leaveTo="translate-x-full"
+            >
+              <Dialog.Panel className="h-full w-72 bg-ink-950 p-4 text-white shadow-xl">
+                <div className="mb-4 flex items-center justify-between">
+                  <Dialog.Title className="font-semibold">Navigate</Dialog.Title>
+                  <button type="button" onClick={() => setOpen(false)} aria-label="Close menu">
+                    <XMarkIcon className="h-6 w-6" />
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  {nav.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm ${
+                          tab === item.id ? "bg-white/10" : "hover:bg-white/5"
+                        }`}
+                        onClick={() => {
+                          setTab(item.id);
+                          setOpen(false);
+                        }}
+                      >
+                        <Icon className="h-5 w-5" />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
+        </Dialog>
+      </Transition>
+    </>
+  );
+}

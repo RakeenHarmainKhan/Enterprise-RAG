@@ -1,0 +1,142 @@
+"""FastAPI application entrypoint."""
+
+from __future__ import annotations
+
+import contextlib
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+import redis.asyncio as redis
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from opensearchpy import OpenSearch
+
+from app.api.routes import admin, collections, documents, evaluation, health, query
+from app.cache.semantic_cache import SemanticCache
+from app.core.config import Settings, load_yaml_config, merge_llm_from_env
+from app.core.llm import LLMFactory
+from app.core.logging import configure_logging, get_logger
+from app.evaluation.metrics import EvaluationEngine
+from app.generation.generator import GenerationEngine
+from app.guardrails.chain import GuardrailChain
+from app.ingestion.embedders import build_embedder
+from app.ingestion.pipeline import IngestionPipeline
+from app.observability.event_bus import EventBus
+from app.observability.langfuse_tracer import LangfuseTracer, reset_current_tracer, set_current_tracer
+from app.retrieval.engine import RetrievalEngine
+from app.state import AppState
+from app.storage.collections import CollectionStore
+from app.storage.documents import DocumentStore
+
+log = get_logger(__name__)
+
+
+def _resolve_config_path(settings: Settings) -> Path:
+    p = Path(settings.config_yaml_path)
+    return p if p.is_absolute() else Path.cwd() / p
+
+
+def _opensearch_client(settings: Settings) -> OpenSearch:
+    use_ssl = settings.opensearch_url.startswith("https")
+    auth = None
+    if settings.opensearch_user:
+        auth = (settings.opensearch_user, settings.opensearch_password or "")
+    return OpenSearch(
+        hosts=[settings.opensearch_url],
+        http_auth=auth,
+        use_ssl=use_ssl,
+        verify_certs=use_ssl,
+    )
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    settings = Settings()
+    configure_logging(json_logs=not settings.debug, level="DEBUG" if settings.debug else "INFO")
+
+    cfg_path = _resolve_config_path(settings)
+    yaml_cfg = load_yaml_config(cfg_path)
+    merged_llm = merge_llm_from_env(yaml_cfg, settings)
+    yaml_cfg = yaml_cfg.model_copy(update={"llm": merged_llm})
+
+    uploads = Path(settings.uploads_dir)
+    logs_dir = Path(settings.logs_dir)
+    uploads.mkdir(parents=True, exist_ok=True)
+    logs_dir.mkdir(parents=True, exist_ok=True)
+
+    os_client = _opensearch_client(settings)
+    redis_client = redis.from_url(settings.redis_url, decode_responses=True)
+
+    embed_params = dict(yaml_cfg.ingestion.embedder_params)
+    embedder = build_embedder(yaml_cfg.ingestion.embedder, settings, **embed_params)
+    ingestion = IngestionPipeline(yaml_cfg, settings, os_client, embedder=embedder)
+    llm = LLMFactory.create(yaml_cfg.llm, settings)
+    llm_for_router = llm if yaml_cfg.retrieval.router == "classifier" else None
+    retrieval = RetrievalEngine(yaml_cfg, os_client, embedder, llm_for_router)
+    generation = GenerationEngine(yaml_cfg, llm, retrieval)
+    input_chain = GuardrailChain(yaml_cfg.guardrails.input_chain)
+    output_chain = GuardrailChain(yaml_cfg.guardrails.output_chain)
+    evaluation = EvaluationEngine(yaml_cfg, llm)
+    sem_cache = SemanticCache(yaml_cfg, redis_client, embedder)
+    bus = EventBus()
+    lf = LangfuseTracer(yaml_cfg, settings)
+    tracer_token = set_current_tracer(lf)
+
+    doc_store = DocumentStore(uploads)
+    coll_store = CollectionStore(uploads)
+    await doc_store.load()
+    await coll_store.load()
+
+    app.state.app_state = AppState(
+        settings=settings,
+        yaml_config=yaml_cfg,
+        opensearch=os_client,
+        redis=redis_client,
+        llm=llm,
+        ingestion=ingestion,
+        retrieval=retrieval,
+        generation=generation,
+        input_guardrails=input_chain,
+        output_guardrails=output_chain,
+        evaluation=evaluation,
+        semantic_cache=sem_cache,
+        event_bus=bus,
+        langfuse=lf,
+        documents=doc_store,
+        collections=coll_store,
+        uploads_path=uploads,
+    )
+
+    log.info("app_startup", config=str(cfg_path))
+    try:
+        yield
+    finally:
+        lf.flush()
+        reset_current_tracer(tracer_token)
+        with contextlib.suppress(Exception):
+            await redis_client.aclose()
+        with contextlib.suppress(Exception):
+            os_client.close()
+        log.info("app_shutdown")
+
+
+def create_app() -> FastAPI:
+    settings = Settings()
+    app = FastAPI(title="Enterprise RAG System", version="0.1.0", lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origin_list(),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    app.include_router(health.router)
+    app.include_router(documents.router)
+    app.include_router(query.router)
+    app.include_router(collections.router)
+    app.include_router(evaluation.router)
+    app.include_router(admin.router)
+    return app
+
+
+app = create_app()

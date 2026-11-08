@@ -1,0 +1,38 @@
+"""Structured JSON logging via structlog."""
+
+import logging
+import sys
+from typing import Any
+
+import structlog
+
+
+def configure_logging(json_logs: bool = True, level: str = "INFO") -> None:
+    """Configure structlog and stdlib logging for consistent JSON output."""
+    log_level = getattr(logging, level.upper(), logging.INFO)
+    logging.basicConfig(format="%(message)s", stream=sys.stdout, level=log_level)
+
+    shared: list[Any] = [
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso", key="timestamp"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+    ]
+    if json_logs:
+        shared.append(structlog.processors.JSONRenderer())
+    else:
+        shared.append(structlog.dev.ConsoleRenderer(colors=True))
+
+    structlog.configure(
+        processors=shared,
+        wrapper_class=structlog.make_filtering_bound_logger(log_level),
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
+        cache_logger_on_first_use=True,
+    )
+
+
+def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
+    """Return a bound structlog logger."""
+    return structlog.get_logger(name)

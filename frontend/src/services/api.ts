@@ -1,0 +1,144 @@
+import axios, { type AxiosInstance } from "axios";
+
+const baseURL =
+  import.meta.env.VITE_API_BASE ??
+  (import.meta.env.PROD ? "/api" : "");
+
+export const api: AxiosInstance = axios.create({
+  baseURL,
+  timeout: 120_000,
+});
+
+export type DocumentMeta = {
+  id: string;
+  filename: string;
+  status: string;
+  chunks?: number;
+  collection_id?: string;
+  path?: string;
+  error?: string;
+};
+
+export type Collection = {
+  id: string;
+  name: string;
+  description?: string;
+};
+
+export async function healthLive() {
+  const { data } = await api.get<{ status: string }>("/health/live");
+  return data;
+}
+
+export async function healthReady() {
+  const { data } = await api.get<{ ready: boolean; components: unknown }>("/health/ready");
+  return data;
+}
+
+export async function listDocuments() {
+  const { data } = await api.get<{ documents: DocumentMeta[] }>("/documents");
+  return data.documents;
+}
+
+export async function uploadDocument(file: File, collectionId?: string) {
+  const form = new FormData();
+  form.append("file", file);
+  if (collectionId) form.append("collection_id", collectionId);
+  const { data } = await api.post("/documents/upload", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data as Record<string, unknown>;
+}
+
+export async function deleteDocument(id: string) {
+  await api.delete(`/documents/${id}`);
+}
+
+export async function runQuery(body: {
+  query: string;
+  collection_id?: string | null;
+  stream?: boolean;
+  use_cache?: boolean;
+}) {
+  const { data } = await api.post("/query", body);
+  return data as Record<string, unknown>;
+}
+
+export async function runQueryStream(
+  body: { query: string; collection_id?: string | null; use_cache?: boolean },
+  onToken: (t: string) => void,
+  onEvent: (evt: Record<string, unknown>) => void,
+) {
+  const res = await fetch(`${baseURL}/query`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, stream: true }),
+  });
+  if (!res.ok || !res.body) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const parts = buf.split("\n\n");
+    buf = parts.pop() ?? "";
+    for (const block of parts) {
+      const line = block.trim();
+      if (!line.startsWith("data:")) continue;
+      const json = line.slice(5).trim();
+      try {
+        const evt = JSON.parse(json) as Record<string, unknown>;
+        if (typeof evt.token === "string") onToken(evt.token);
+        onEvent(evt);
+      } catch {
+        /* ignore parse errors */
+      }
+    }
+  }
+}
+
+export async function listCollections() {
+  const { data } = await api.get<{ collections: Collection[] }>("/collections");
+  return data.collections;
+}
+
+export async function createCollection(name: string, description = "") {
+  const { data } = await api.post<Collection>("/collections", { name, description });
+  return data;
+}
+
+export async function adminStats() {
+  const { data } = await api.get("/admin/stats");
+  return data as Record<string, unknown>;
+}
+
+export async function adminConfig() {
+  const { data } = await api.get("/admin/config");
+  return data as Record<string, unknown>;
+}
+
+export async function adminReindex() {
+  const { data } = await api.post("/admin/reindex");
+  return data as Record<string, unknown>;
+}
+
+export async function runEvaluation(payload: {
+  question: string;
+  answer: string;
+  contexts: string[];
+}) {
+  const { data } = await api.post("/evaluation/run", payload);
+  return data as Record<string, unknown>;
+}
+
+export async function listEvalResults(limit = 50) {
+  const { data } = await api.get<{ results: Record<string, unknown>[] }>("/evaluation/results", {
+    params: { limit },
+  });
+  return data.results;
+}
