@@ -14,6 +14,7 @@ type QueryState = {
   lastAnswer: string;
   lastSources: { index?: number; preview?: string; chunk_id?: string; document_id?: string }[];
   lastCached: boolean;
+  lastWarnings: string[];
   streaming: boolean;
   error: string | null;
 };
@@ -68,6 +69,7 @@ const initialQuery: QueryState = {
   lastAnswer: "",
   lastSources: [],
   lastCached: false,
+  lastWarnings: [],
   streaming: false,
   error: null,
 };
