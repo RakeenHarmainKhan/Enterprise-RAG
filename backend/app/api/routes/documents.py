@@ -8,7 +8,7 @@ import shutil
 import aiofiles
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
-from app.api.dependencies import DocumentsDep, IngestionDep, YamlConfigDep
+from app.api.dependencies import DocumentsDep, IngestionDep, SemanticCacheDep, YamlConfigDep
 from app.core.exceptions import IngestionError
 from app.ingestion.indexers import OpenSearchIndexer
 
@@ -20,6 +20,7 @@ async def upload_document(
     documents: DocumentsDep,
     pipeline: IngestionDep,
     yaml_cfg: YamlConfigDep,
+    cache: SemanticCacheDep,
     file: UploadFile = File(...),
     collection_id: str | None = Form(default=None),
 ) -> dict[str, object]:
@@ -42,6 +43,7 @@ async def upload_document(
             collection_id=collection_id,
         )
         await documents.mark_ready(doc_id, chunks=result["chunks"], path=str(dest_path))
+        await cache.clear_if_enabled()
         return {"status": "ok", **result}
     except IngestionError as e:
         await documents.mark_failed(doc_id, str(e))
@@ -70,6 +72,7 @@ async def delete_document(
     request: Request,
     documents: DocumentsDep,
     yaml_cfg: YamlConfigDep,
+    cache: SemanticCacheDep,
 ) -> dict[str, object]:
     state = request.app.state.app_state
     indexer = OpenSearchIndexer(
@@ -81,6 +84,8 @@ async def delete_document(
     dest = documents.resolve_upload_dir(doc_id)
     if dest.exists():
         shutil.rmtree(dest, ignore_errors=True)
+    if deleted:
+        await cache.clear_if_enabled()
     if not existed and deleted == 0:
         raise HTTPException(status_code=404, detail="Not found")
     return {"deleted": True, "chunks_removed": deleted}

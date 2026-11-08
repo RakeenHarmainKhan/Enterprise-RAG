@@ -56,7 +56,7 @@ async def run_query(
 
     q = in_res.text
     if body.use_cache and yaml_cfg.cache.backend == "redis":
-        cached = await cache.lookup(q)
+        cached = await cache.lookup(q, body.collection_id)
         if cached:
             await bus.publish({"type": "query_cache_hit"})
             return {"cached": True, **cached}
@@ -86,7 +86,7 @@ async def run_query(
                 yield f"data: {json.dumps({'token': chunk})}\n\n"
             payload = {"answer": text, "warnings": out_res.warnings}
             if body.use_cache and yaml_cfg.cache.backend == "redis":
-                await cache.store(q, payload)
+                await cache.store(q, payload, body.collection_id)
             yield f"data: {json.dumps({'done': True, 'answer': text})}\n\n"
             await bus.publish({"type": "query_done", "stream": True})
 
@@ -102,7 +102,9 @@ async def run_query(
     result["answer"] = out_res.text
     result["guardrail_warnings"] = out_res.warnings + in_res.warnings
     if body.use_cache and yaml_cfg.cache.backend == "redis":
-        await cache.store(q, {k: v for k, v in result.items() if k != "chunks_used"})
+        await cache.store(
+            q, {k: v for k, v in result.items() if k != "chunks_used"}, body.collection_id
+        )
     await bus.publish({"type": "query_done", "stream": False})
     return result
 

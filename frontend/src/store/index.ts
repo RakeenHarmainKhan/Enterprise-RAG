@@ -13,6 +13,7 @@ export type UiTab =
 type QueryState = {
   lastAnswer: string;
   lastSources: { index?: number; preview?: string; chunk_id?: string; document_id?: string }[];
+  lastCached: boolean;
   streaming: boolean;
   error: string | null;
 };
@@ -66,6 +67,7 @@ export type RootState = UiSlice &
 const initialQuery: QueryState = {
   lastAnswer: "",
   lastSources: [],
+  lastCached: false,
   streaming: false,
   error: null,
 };

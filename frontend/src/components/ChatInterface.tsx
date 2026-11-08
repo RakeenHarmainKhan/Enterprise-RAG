@@ -17,7 +17,12 @@ export function ChatInterface() {
   async function onSend() {
     const q = text.trim();
     if (!q) return;
-    setQueryPartial({ error: null, streaming: stream, lastAnswer: stream ? "" : query.lastAnswer });
+    setQueryPartial({
+      error: null,
+      streaming: stream,
+      lastCached: false,
+      lastAnswer: stream ? "" : query.lastAnswer,
+    });
     try {
       if (stream) {
         let acc = "";
@@ -51,6 +56,7 @@ export function ChatInterface() {
         setQueryPartial({
           lastAnswer: String(data.answer ?? ""),
           lastSources: (data.sources as typeof query.lastSources) ?? [],
+          lastCached: data.cached === true,
           streaming: false,
         });
       }
@@ -91,6 +97,11 @@ export function ChatInterface() {
           {query.error && <p className="text-red-600">{query.error}</p>}
           {!query.lastAnswer && !query.error && (
             <p className="text-slate-500">Ask a question grounded in your ingested documents.</p>
+          )}
+          {query.lastAnswer && query.lastCached && (
+            <p className="mb-2 inline-block rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-900">
+              <span aria-hidden="true">⚡ </span>Cached answer
+            </p>
           )}
           {query.lastAnswer && (
             <ReactMarkdown className="max-w-none text-slate-800">{query.lastAnswer}</ReactMarkdown>
