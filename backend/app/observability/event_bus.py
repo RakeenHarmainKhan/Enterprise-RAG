@@ -28,5 +28,5 @@ class EventBus:
         for h in handlers:
             try:
                 await h(event)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 log.warning("event_handler_failed", error=str(e), event_type=event.get("type"))

@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 
 class MetadataEnricher:
     """Derive lightweight metadata from chunk text and file context."""
 
-    _date_patterns = [
+    _date_patterns = (
         re.compile(r"\b(20\d{2}-\d{2}-\d{2})\b"),
         re.compile(r"\b(\d{1,2}/\d{1,2}/20\d{2})\b"),
-    ]
+    )
 
     def enrich(
         self,
@@ -26,7 +26,7 @@ class MetadataEnricher:
             "title": self._infer_title(chunk_text, filename),
             "extracted_dates": self._extract_dates(chunk_text),
             "entities": self._simple_entities(chunk_text),
-            "enriched_at": datetime.utcnow().isoformat() + "Z",
+            "enriched_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         }
         if extra:
             meta.update(extra)

@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import shutil
+from typing import Annotated
 
 import aiofiles
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
-from app.api.dependencies import DocumentsDep, IngestionDep, SemanticCacheDep, YamlConfigDep
+from app.api.dependencies import (
+    DocumentsDep,
+    IngestionDep,
+    SemanticCacheDep,
+    YamlConfigDep,
+)
 from app.core.exceptions import IngestionError
 from app.ingestion.indexers import OpenSearchIndexer
 
@@ -21,7 +27,7 @@ async def upload_document(
     pipeline: IngestionDep,
     yaml_cfg: YamlConfigDep,
     cache: SemanticCacheDep,
-    file: UploadFile = File(...),
+    file: Annotated[UploadFile, File()],
     collection_id: str | None = Form(default=None),
 ) -> dict[str, object]:
     doc_id = await documents.create_placeholder(

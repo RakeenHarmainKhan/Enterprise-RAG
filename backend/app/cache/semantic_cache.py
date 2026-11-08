@@ -92,6 +92,6 @@ class SemanticCache:
             return None
         try:
             return await self.clear_prefix()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             log.warning("semantic_cache_clear_failed", error=str(e))
             return None

@@ -5,6 +5,7 @@ from unittest.mock import Mock
 
 import numpy as np
 import pytest
+
 from app.core.config import GuardrailStepConfig
 from app.guardrails.chain import GuardrailChain, _plugin_factory
 from app.guardrails.hallucination_checker import HallucinationCheckerGuardrail
