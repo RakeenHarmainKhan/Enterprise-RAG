@@ -22,6 +22,58 @@ flowchart LR
 
 ---
 
+## Prepare a SQuAD pilot (no RAGAS installation required)
+
+From the repository root on Windows:
+
+```powershell
+.\rag-env\Scripts\python.exe backend\scripts\prepare_squad.py --download --output evaluation_data\squad-pilot
+```
+
+This explicitly downloads official SQuAD 2.0 development data once to
+`evaluation_data\raw\dev-v2.0.json`; later download runs reuse the validated cache.
+To use an existing original nested SQuAD JSON file instead:
+
+```powershell
+.\rag-env\Scripts\python.exe backend\scripts\prepare_squad.py --input evaluation_data\raw\dev-v2.0.json --output evaluation_data\squad-pilot-2
+```
+
+Use a new output directory each time: existing directories are never overwritten.
+Download/network and input validation errors exit unsuccessfully with an explanation.
+No new packages, API keys, running backend, OpenSearch or models are needed.
+
+The script selects 20 answerable questions, 10 unanswerable candidates and ten
+distinct extra passages. It spreads questions across article titles, deduplicates
+shared evidence, and uses a fixed seed (42; override with `--seed`). Identical
+input bytes and seed reproduce the same generated files:
+
+- `corpus/`: Markdown passages only, with titles; these are the only files intended
+  for later ingestion into an isolated evaluation collection.
+- `cases.jsonl`: original question IDs, questions, source passage IDs, original
+  answerability, all accepted reference answers with original character offsets,
+  and review status. Offsets refer to the original passage, not the Markdown title.
+- `manifest.json`: source URL/hash, seed, recipe version, selected IDs, counts,
+  corpus mapping and attribution/license reference.
+
+**Do not ingest the questions, reference answers or manifest.** They are evaluation
+metadata, not searchable evidence. Downloaded/generated files under
+`evaluation_data/` are excluded from Git; commit only the preparation tool, tests
+and documentation. Keep outputs in that ignored directory.
+
+SQuAD's unanswerable labels apply to individual original passages. Review all ten
+`needs_review` cases against the *entire* generated corpus before treating them as
+unanswerable. Even extra passages can supply answers; automated preparation does
+not certify this. Answerable cases are also marked `not_reviewed` until reviewed.
+This adapted subset is a pilot, not a result on the full SQuAD benchmark; familiar
+public questions may also have appeared in model training.
+
+Source: [SQuAD](https://rajpurkar.github.io/SQuAD-explorer/), Rajpurkar et al.
+The [dataset card](https://huggingface.co/datasets/rajpurkar/squad_v2) identifies
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/); preserve attribution
+and check applicable license requirements before redistributing source passages.
+This step does not run the application or integrate RAGAS. A baseline runner,
+judge validation and actual RAGAS metrics are subsequent work.
+
 ## Configured metrics
 
 **`evaluation.metrics`** in **`config.yaml`** selects from:

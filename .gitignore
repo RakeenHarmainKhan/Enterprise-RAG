@@ -61,3 +61,6 @@ logs/
 rag-env/
 env.laptop.example
 README.md
+
+# Local evaluation downloads and generated datasets
+/evaluation_data/
