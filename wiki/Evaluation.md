@@ -74,6 +74,78 @@ and check applicable license requirements before redistributing source passages.
 This step does not run the application or integrate RAGAS. A baseline runner,
 judge validation and actual RAGAS metrics are subsequent work.
 
+## Capture a reviewed baseline
+
+The runner uses the existing local backend API. It does not install RAGAS or score
+answers. Start the backend, OpenSearch, Ollama (or your configured provider) and
+Redis if caching is configured. The frontend is not required.
+
+First place your completed `review.json` beside `cases.jsonl`. It must contain
+`schema_version: 1`, the SHA-256 of `cases.jsonl` in `cases_sha256`, and a `cases`
+list with exactly one decision per original question ID. Each decision needs
+`id`, `decision` (`include` or `exclude`) and `reason`; included cases also need
+`expected_behavior`. Optional `preferred_reference` annotations preserve reference
+clarifications without changing original answers. The runner joins decisions by
+ID and uses included cases only.
+
+The review is local data, not part of a Git pull. When moving the pilot to another
+machine, regenerate it with the same input and seed, then copy your reviewed
+`review.json` separately into the pilot folder. The runner verifies its cases
+fingerprint. Never overwrite the original generated cases to make a review fit.
+
+From the repository root:
+
+```powershell
+.\rag-env\Scripts\python.exe backend\scripts\run_squad_baseline.py --dataset evaluation_data\squad-pilot --output evaluation_data\runs\baseline-1
+```
+
+Default backend: `http://127.0.0.1:8000`; use `--base-url` to select another local
+HTTP port. Remote origins and credential-bearing URLs are rejected, and proxy
+environment settings are not used. The backend still uses its configured LLM
+provider: inspect that configuration before running if documents must remain local.
+
+The runner:
+
+- Validates the reviewed cases and passage hashes before API mutations.
+- Refuses an existing output folder or an existing collection named `squad-eval`,
+  preventing accidental duplicate uploads during an ordinary rerun.
+- Creates a fresh collection and uploads only manifest-listed Markdown passages.
+  No question, reference-answer or review file is uploaded.
+- Queries sequentially with `use_cache=false` and `stream=false`.
+- Saves `run.json` with dataset/review fingerprints, backend YAML configuration,
+  collection ID, passage-to-document mapping and progress.
+- Saves `results.jsonl` with each included case/review, API response, full
+  retrieved chunks, full text of source chunks selected for generation, and
+  elapsed request milliseconds. `prompt_contexts` is reconstructed from matching
+  source/chunk IDs, not the exact serialized LLM prompt. Timings include HTTP
+  overhead and initial model warm-up; this is not a load benchmark.
+- Rejects cached replies and evidence outside the newly uploaded document IDs.
+- Records individual query errors, continues remaining questions and exits
+  unsuccessfully if any fail. Setup/ingestion errors stop the run and record
+  partial progress. There are no automatic retries or automatic deletions.
+
+**Existing app behavior:** each successful upload clears the app's semantic cache
+when Redis caching is enabled. The runner does not delete or update your existing
+documents/collections, but cannot avoid that global cache-invalidation side effect
+without changing the app.
+
+After an interrupted run, inspect `run.json` and the app before retrying. An upload
+may have reached the backend even if its response timed out, so do not blindly
+repeat uploads. This first runner does not resume interrupted runs. Keep partial
+results for diagnosis and either remove the evaluation-only documents/collection
+manually, or use a new output directory and explicit fresh collection name:
+
+```powershell
+.\rag-env\Scripts\python.exe backend\scripts\run_squad_baseline.py --dataset evaluation_data\squad-pilot --output evaluation_data\runs\baseline-2 --collection-name squad-eval-2
+```
+
+Run only one importer at a time: the existing API does not enforce unique
+collection names, so the duplicate check is not a concurrency lock.
+Keep dataset and result directories under ignored `evaluation_data/`; responses
+and configuration snapshots are local experimental data. A successful baseline
+means requests completed, not that the answers were correct. Evaluate challenge
+questions separately using their reviewed expected behavior.
+
 ## Configured metrics
 
 **`evaluation.metrics`** in **`config.yaml`** selects from:
