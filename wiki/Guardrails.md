@@ -73,8 +73,18 @@ Runs on the **model answer**. For hallucination checking, pass **`context`** wit
 ### `hallucination_checker`
 
 - Loads **`CrossEncoder("cross-encoder/nli-deberta-v3-small")`**.
-- Builds pairs **premise** = first 512 chars of each of up to **6** retrieval chunks’ **`text`**, **hypothesis** = first 512 chars of answer.
-- Takes **max** entailment score across pairs; if below **`entailment_threshold`**, **`block`** or **`warn`**.
+- Builds pairs using the text of up to **6** retrieval chunks and the answer with
+  bracket citation markers removed. There is no 512-character slicing: the model's
+  tokenizer applies its token-length limit to each pair. Long pairs can still be
+  truncated by that limit.
+- Uses softmax probabilities in the model's label order: contradiction,
+  entailment, neutral. Takes **max** entailment probability across pairs; if below
+  **`entailment_threshold`**, **`block`** or **`warn`**.
+- This is a whole-answer heuristic, not sentence-level verification. Evidence
+  after the first six chunks is not checked, and a high score does not certify
+  every claim or citation. With no evidence or an empty answer the check skips;
+  absence of a warning is not proof of grounding. Keep warning mode until
+  false positives and missed failures have been evaluated on your data.
 
 > [!WARNING]
 > **`POST /query/batch`** calls **`output_g.process(res["answer"])`** **without** retrieval context—entailment checks may **skip** (no sources) unless you extend the route.
