@@ -229,9 +229,8 @@ Commands below run from the repository root unless stated otherwise. The backend
 ### 0) What you need
 
 - **Python 3.12**, **Node.js 22** (matches the frontend Dockerfile), and **Docker** for OpenSearch and Redis (or point `OPENSEARCH_URL` / `REDIS_URL` at clusters you already run)
-- An LLM and embedding source. Pick one:
-  - **Local (what the checked-in `config.yaml` uses):** [Ollama](https://ollama.com) running with `ollama pull qwen2.5:1.5b`. Embeddings use `all-MiniLM-L6-v2` on your machine; no API key is needed.
-  - **OpenAI:** an `OPENAI_API_KEY`, plus the `llm` and `ingestion.embedder` settings changed in `config.yaml` (see [Configuration](#configuration-the-guided-tour)).
+- **An OpenAI API key** for chat. The shipped `config.yaml` uses `gpt-5.4-mini`. Embeddings run locally with `all-MiniLM-L6-v2`, so no embedding key is needed.
+- **Or a fully local LLM:** [Ollama](https://ollama.com) with `ollama pull qwen2.5:1.5b`, then set `LLM_PROVIDER=ollama_chat` and `LLM_MODEL=qwen2.5:1.5b` in `.env` (see [Configuration](#configuration-the-guided-tour)).
 
 ### 1) Clone and wire secrets
 
@@ -241,7 +240,7 @@ cd Enterprise-RAG
 cp env.example .env          # PowerShell: Copy-Item env.example .env
 ```
 
-Edit `.env` as needed. Leave optional values blank to use the defaults. Set `OPENAI_API_KEY` only if you use OpenAI.
+Edit `.env`: set `OPENAI_API_KEY` for the shipped config, or set `LLM_PROVIDER` and `LLM_MODEL` for Ollama. Leave other optional values blank to use the defaults.
 
 ### 2) Install dependencies
 
@@ -276,7 +275,7 @@ cd frontend && npm run dev
 ```
 
 > [!NOTE]
-> Using a local model? Start Ollama first (`ollama serve`, if it is not already running) and confirm the model is pulled.
+> Using Ollama? Start it first (`ollama serve`, if it is not already running), confirm the model is pulled, and set `LLM_PROVIDER` and `LLM_MODEL` in `.env`.
 
 ### 5) What “healthy” looks like
 
@@ -335,7 +334,6 @@ Enterprise-RAG/
 ├── env.example                 # Environment template (copy to .env)
 ├── docker-compose.yml          # OpenSearch (+ Redis under the "cache" profile)
 ├── report.md                   # 40-response evaluation report (4,000-token budget)
-├── LICENSE
 ├── README.md
 ├── docs/assets/icon.svg        # Brand mark for README / docs
 ├── wiki/                       # Extended documentation (linked from here)
@@ -377,7 +375,7 @@ Enterprise-RAG/
 
 ## Configuration (the guided tour)
 
-The checked-in `config.yaml` is a **local laptop profile**: Ollama LLM (`qwen2.5:1.5b`), local MiniLM embeddings (384 dimensions), recursive chunking, and a cross-encoder reranker. Changing the embedding model changes the vector dimension, so re-index into a new `index_name` rather than reusing the existing one.
+The checked-in `config.yaml` uses OpenAI chat (`gpt-5.4-mini`), local MiniLM embeddings (384 dimensions), recursive chunking, and a cross-encoder reranker. When `LLM_PROVIDER` or `LLM_MODEL` is set in `.env`, it overrides the YAML `llm` section. Changing the embedding model changes the vector dimension, so re-index into a new `index_name` rather than reusing the existing one.
 
 ### Ingestion (`config.yaml` → `ingestion`)
 
@@ -573,4 +571,4 @@ Components:
 
 ## License
 
-Code is released under the [MIT License](LICENSE). Evaluation data carries its own terms: the Python documentation excerpts in the report are under the [Python Software Foundation License 2](https://docs.python.org/3.12/license.html), and the SQuAD-derived pilot is under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). See [report.md](report.md) for the full notices.
+Code is released under the MIT License. Evaluation data carries its own terms: the Python documentation excerpts in the report are under the [Python Software Foundation License 2](https://docs.python.org/3.12/license.html), and the SQuAD-derived pilot is under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). See [report.md](report.md) for the full notices.

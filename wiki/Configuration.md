@@ -119,9 +119,9 @@ Defined in **`Settings`** (`core/config.py`), loaded from **`.env`**:
 | `REDIS_URL` | Redis connection string |
 | `LANGFUSE_SECRET_KEY` / `LANGFUSE_PUBLIC_KEY` | Langfuse credentials |
 | `LANGFUSE_BASE_URL` | Default `https://cloud.langfuse.com` |
-| `EMBEDDING_MODEL` | Default embedding model name |
-| `EMBEDDING_PROVIDER` | Embedding provider hint |
-| `BACKEND_HOST` / `BACKEND_PORT` | Server bind (used by deployment) |
+| `EMBEDDING_MODEL` | Fallback embedding model, used only when `ingestion.embedder_params.model` is not set |
+| `EMBEDDING_PROVIDER` | Defined but not read; the embedder is chosen by `ingestion.embedder` in YAML |
+| `BACKEND_HOST` / `BACKEND_PORT` | Defined but not read by the app; set the bind address on the `uvicorn` command |
 | `CONFIG_YAML_PATH` | Path to YAML |
 | `CORS_ORIGINS` | Comma-separated allowed origins |
 | `DEBUG` | Enables debug logging |
