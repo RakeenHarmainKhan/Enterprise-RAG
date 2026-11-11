@@ -2,7 +2,7 @@
 # Local embeddings and reranking; chat provider can be overridden by environment.
 llm:
   provider: openai
-  model: gpt-5.4-mini
+  model: gpt-5.1
   temperature: 0.2
   max_tokens: 512
   timeout_seconds: 120

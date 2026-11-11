@@ -33,9 +33,9 @@ flowchart TB
 
 **Env overrides:** **`LLM_MODEL`**, **`LLM_PROVIDER`** merge over YAML at startup (**`merge_llm_from_env`**).
 
-The checked-in profile selects OpenAI GPT-5.4 Mini for generation. Set
+The checked-in profile selects OpenAI GPT-5.1 for generation. Set
 `OPENAI_API_KEY` locally, and remove old `LLM_PROVIDER`/`LLM_MODEL` overrides
-or set them to `openai` and `gpt-5.4-mini`. To select Ollama again, set
+or set them to `openai` and `gpt-5.1`. To select Ollama again, set
 `LLM_PROVIDER=ollama_chat` and `LLM_MODEL=qwen2.5:1.5b`. Chat provider changes
 do not change local embedding or reranking. OpenAI receives the question and
 selected document excerpts for generation.
