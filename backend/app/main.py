@@ -25,8 +25,7 @@ from app.ingestion.pipeline import IngestionPipeline
 from app.observability.event_bus import EventBus
 from app.observability.langfuse_tracer import (
     LangfuseTracer,
-    reset_current_tracer,
-    set_current_tracer,
+    TracingMiddleware,
 )
 from app.retrieval.engine import RetrievalEngine
 from app.state import AppState
@@ -92,7 +91,6 @@ async def lifespan(app: FastAPI):
 
     await bus.subscribe(_log_event)
     lf =  LangfuseTracer(yaml_cfg, settings)
-    tracer_token = set_current_tracer(lf)
 
     doc_store = DocumentStore(uploads)
     coll_store = CollectionStore(uploads)
@@ -123,8 +121,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        lf.flush()
-        reset_current_tracer(tracer_token)
+        lf.shutdown()
         with contextlib.suppress(Exception):
             await redis_client.aclose()
         with contextlib.suppress(Exception):
@@ -135,6 +132,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     settings = Settings()
     app = FastAPI(title="Enterprise RAG System", version="0.1.0", lifespan=lifespan)
+    app.add_middleware(TracingMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list(),
