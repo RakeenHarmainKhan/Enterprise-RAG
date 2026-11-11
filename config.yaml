@@ -80,5 +80,5 @@ cache:
   similarity_threshold: 0.9
 
 observability:
-  langfuse_enabled: false
-  tracing: false
+  langfuse_enabled: true
+  tracing: true
