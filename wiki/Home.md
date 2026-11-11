@@ -1,6 +1,6 @@
 # Welcome to the wiki
 
-You found the in-repo docs for **[Enterprise RAG System](https://github.com/anmolg1997/Enterprise-RAG-System)**. The [README](../README.md) is the front door—badges, quick start, and a fast API cheat sheet. **This wiki is where the architecture, config knobs, and operational footguns get room to breathe.**
+You found the in-repo docs for Enterprise RAG System. The [README](../README.md) is the front door—badges, quick start, and a fast API cheat sheet. **This wiki is where the architecture, config knobs, and operational footguns get room to breathe.**
 
 ---
 
@@ -9,9 +9,6 @@ You found the in-repo docs for **[Enterprise RAG System](https://github.com/anmo
 - **Backend:** FastAPI in `backend/app/` — ingestion, hybrid retrieval, generation, guardrails, evaluation, Redis semantic cache, Langfuse client.
 - **Index:** OpenSearch with **`knn_vector`** + **`text`** mappings so dense and lexical retrieval share one honest index.
 - **Frontend:** React 18 SPA (`frontend/src/`) with **ChatInterface**, **DocumentManager**, **AnalyticsDashboard**, **GuardrailsConfig**, and **EvaluationPanel**.
-
-> [!TIP]
-> Keep **http://localhost:8000/docs** open while you read. Nothing beats clicking “Try it out” when the words start to blur.
 
 ---
 
@@ -66,12 +63,4 @@ flowchart TB
 | [Configuration](Configuration.md) | Full `config.yaml` reference and environment variables |
 | [API Reference](API-Reference.md) | HTTP endpoints with request/response examples |
 | [Use Cases](Use-Cases.md) | Four detailed scenarios with setup steps |
-| [Contributing](Contributing.md) | Plugins, code style, pull requests |
 
----
-
-## Quick links
-
-- OpenAPI (local): `http://localhost:8000/docs`
-- Repository: https://github.com/anmolg1997/Enterprise-RAG-System
-- License: [MIT](../LICENSE)

@@ -21,7 +21,7 @@
 ## Install
 
 ```bash
-git clone https://github.com/anmolg1997/Enterprise-RAG-System.git
+git clone <>
 cd Enterprise-RAG-System
 cp env.example .env
 ```

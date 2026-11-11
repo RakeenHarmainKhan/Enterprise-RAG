@@ -30,9 +30,6 @@ flowchart LR
   class V,T store
 ```
 
-> [!NOTE]
-> Optional **`HybridRetriever`** issues one OpenSearch request with a **`hybrid`** query payload when you configure a single strategy named **`hybrid_strategy`** / **`hybrid`** instead of separate dense+sparse passes.
-
 ---
 
 ## Hybrid search strategy
