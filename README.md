@@ -229,7 +229,7 @@ Commands below run from the repository root unless stated otherwise. The backend
 ### 0) What you need
 
 - **Python 3.12**, **Node.js 22** (matches the frontend Dockerfile), and **Docker** for OpenSearch and Redis (or point `OPENSEARCH_URL` / `REDIS_URL` at clusters you already run)
-- **An OpenAI API key** for chat. The shipped `config.yaml` uses `gpt-5.4-mini`. Embeddings run locally with `all-MiniLM-L6-v2`, so no embedding key is needed.
+- **An OpenAI API key** for chat. The shipped `config.yaml` uses `gpt-5.1`. Embeddings run locally with `all-MiniLM-L6-v2`, so no embedding key is needed.
 - **Or a fully local LLM:** [Ollama](https://ollama.com) with `ollama pull qwen2.5:1.5b`, then set `LLM_PROVIDER=ollama_chat` and `LLM_MODEL=qwen2.5:1.5b` in `.env` (see [Configuration](#configuration-the-guided-tour)).
 
 ### 1) Clone and wire secrets
@@ -375,7 +375,7 @@ Enterprise-RAG/
 
 ## Configuration (the guided tour)
 
-The checked-in `config.yaml` uses OpenAI chat (`gpt-5.4-mini`), local MiniLM embeddings (384 dimensions), recursive chunking, and a cross-encoder reranker. When `LLM_PROVIDER` or `LLM_MODEL` is set in `.env`, it overrides the YAML `llm` section. Changing the embedding model changes the vector dimension, so re-index into a new `index_name` rather than reusing the existing one.
+The checked-in `config.yaml` uses OpenAI chat (`gpt-5.1`), local MiniLM embeddings (384 dimensions), recursive chunking, and a cross-encoder reranker. When `LLM_PROVIDER` or `LLM_MODEL` is set in `.env`, it overrides the YAML `llm` section. Changing the embedding model changes the vector dimension, so re-index into a new `index_name` rather than reusing the existing one.
 
 ### Ingestion (`config.yaml` → `ingestion`)
 
